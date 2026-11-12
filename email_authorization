@@ -1,0 +1,55 @@
+Стандартный механизм авторизации пользователя на «Битрикс» основан на логине и пароле. Несомненно, пользователям удобнее использовать адрес электронной почты в качестве логина. Казалось бы, можно назвать поле логина «E-mail» и этим ограничиться? Но нет. Пользователей название поля ни к чему не обязывает. Потребуется дополнительная валидация. Предлагаем простой и безошибочный рецепт авторизации по электронной почте.
+
+1. Редактируем init.php
+
+Для этого находим файл init.php по такому пути
+
+/bitrix/php_interface/имя сайта/init.php
+
+Добавляем в него код:
+
+AddEventHandler("main", "OnBeforeUserLogin", Array("CUserEx", "OnBeforeUserLogin"));
+AddEventHandler("main", "OnBeforeUserRegister", Array("CUserEx", "OnBeforeUserRegister"));
+AddEventHandler("main", "OnBeforeUserRegister", Array("CUserEx", "OnBeforeUserUpdate"));
+class CUserEx
+{
+function OnBeforeUserLogin($arFields)
+{
+$filter = Array("EMAIL" => $arFields["LOGIN"]);
+$rsUsers = CUser::GetList(($by="LAST_NAME"), ($order="asc"), $filter);
+if($user = $rsUsers->GetNext())
+$arFields["LOGIN"] = $user["LOGIN"];
+/*else $arFields["LOGIN"] = "";*/
+}
+function OnBeforeUserRegister($arFields)
+{
+$arFields["LOGIN"] = $arFields["EMAIL"];
+}
+}
+
+2. Организуем вход по логинам и  E-mail
+
+На переходный период обеспечим старым пользователям доступ как по старым логинам, так и по e-mail. Для этого найдем строчку
+
+$arFields["LOGIN"] = $arFields["EMAIL"];
+
+И заменим ее кодом
+
+$arr = explode("@",$arFields["EMAIL"]);
+$arFields["LOGIN"] = $arr[0];
+
+3. Запрещаем авторизацию по старым логинам
+
+Чтобы избежать авторизации по старым логинам, делаем две вещи.
+
+Во – первых, назначаем полям логина в шаблонах редактирования и авторизации атрибут «hidden».
+
+Во – вторых, находим строчку
+
+else $arFields["LOGIN"] = "";
+
+и деактивируем ее комментарием
+
+/*else $arFields["LOGIN"] = "";*/
+
+4. Готово!
