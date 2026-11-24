@@ -1,0 +1,54 @@
+D7 ORM предлагает более объектный и безопасный способ работы.
+Для инфоблоков с заполненным символьным кодом (параметр API_CODE) Битрикс автоматически генерирует ORM-класс, 
+например, ElementProductsTable для инфоблока с кодом products.
+  <?php
+use Bitrix\Iblock\Elements\ElementProductsTable; // Класс генерируется на основе API_CODE
+use Bitrix\Main\Loader;
+
+Loader::includeModule('iblock');
+
+// Получаем коллекцию товаров с кешированием
+$products = ElementProductsTable::getList([
+    'select' => ['ID', 'NAME', 'DETAIL_PAGE_URL', 'PREVIEW_PICTURE'],
+    'filter' => ['=ACTIVE' => 'Y', '=IBLOCK_ID' => 5],
+    'order'  => ['SORT' => 'ASC'],
+    'cache'  => [
+        'ttl' => 3600, // Кешируем результат на 1 час
+    ],
+])->fetchCollection();
+
+// Перебираем коллекцию
+foreach ($products as $product) {
+    // $product — это объект, а не массив
+    echo '<div class="product-card">';
+    echo '  <h3>' . $product->getName() . '</h3>'; // Используем геттеры
+    echo '  <a href="' . $product->getDetailPageUrl() . '">Подробнее</a>';
+    echo '</div>';
+}
+?>
+Параметр cache в getList() (Основной метод)
+Это самый распространенный и простой способ. Вы передаете массив с настройками кеша в метод getList() (а также getByPrimary(), getRow() и другие).
+<?php
+use Bitrix\Main\UserTable;
+
+$result = UserTable::getList([
+    'select' => ['ID', 'LOGIN', 'NAME', 'EMAIL'],
+    'filter' => ['=ACTIVE' => 'Y'],
+    'order'  => ['ID' => 'ASC'],
+    'limit'  => 50,
+    'cache'  => [
+        'ttl'         => 600, // Время жизни кеша: 10 минут (в секундах)
+        'cache_joins' => true, // Кешировать запросы со связями (JOIN)
+    ],
+]);
+
+$users = [];
+while ($user = $result->fetch()) {
+    $users[] = $user;
+}
+
+// Вывод для примера
+echo '<pre>';
+print_r($users);
+echo '</pre>';
+?>
