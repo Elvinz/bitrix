@@ -52,3 +52,35 @@ echo '<pre>';
 print_r($users);
 echo '</pre>';
 ?>
+
+Ручное управление через Entity::readFromCache и writeToCache
+Для более тонкого контроля (например, если нужно закешировать результат, полученный не напрямую из ORM-запроса) можно использовать методы сущности напрямую.
+
+<?php
+use Bitrix\Main\Localization\LanguageTable;
+
+$entity = LanguageTable::getEntity();
+$cacheTtl = 3600;
+$cacheId = 'vendor_languages_list';
+
+// 1. Пытаемся прочитать данные из кеша
+$cached = $entity->readFromCache($cacheTtl, $cacheId);
+
+if ($cached === null) {
+    // 2. Если в кеше пусто — выполняем запрос
+    $result = LanguageTable::getList([
+        'select' => ['LID'],
+        'order'  => ['LID' => 'ASC'],
+    ]);
+    
+    // 3. Сохраняем результат в кеш и получаем его в виде ArrayResult
+    $cached = $entity->writeToCache($result, $cacheId);
+}
+
+// Теперь $cached — это объект Bitrix\Main\DB\ArrayResult
+echo get_class($cached) . ' ' . count($cached->fetchAll());
+
+// Очистка кеша по ключу
+// $entity->cleanCache($cacheId);
+?>
+Этот подход полезен, когда стандартного кеширования через getList недостаточно, но вы хотите оставаться в рамках управляемого кеша Битрикса.
